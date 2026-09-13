@@ -157,10 +157,24 @@ Four steps — about you, your matter, what happened, review and send — with:
 - a reference number, a printable copy of the submission, and clearing of the
   saved draft on submit
 
-**There is no backend.** Both forms simulate the network call with a short
-delay and say so on screen. To make them real, replace the `setTimeout` in
-`case-form.js` (search for `Demo:`) and `contact.js` with a `fetch()` to your
-endpoint, and keep the validation as it is.
+**Connecting it to the Chamber Console.** The case form can post straight into
+the console's database. In `case-submission.html`, set
+
+```html
+<meta name="chamber-api" content="https://your-console-host">
+```
+
+and the form sends to `POST {content}/api/enquiries` — the console validates
+with the same rules the form uses, records an Enquiry, and returns the
+reference number the visitor sees. The console's `PUBLIC_FORM_ORIGINS` must
+include this site's origin (it does for the GitHub Pages URL by default).
+
+Leave the meta empty, or omit it, and the form **simulates** the send with a
+plausible reference and says so on screen — right for a design demo. The
+success screen's "nothing was actually sent" note appears only in that mode.
+
+The short enquiry form on the contact page still simulates; it collects
+nothing a chamber needs to keep.
 
 ---
 

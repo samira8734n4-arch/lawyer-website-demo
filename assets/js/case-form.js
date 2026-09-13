@@ -399,6 +399,43 @@
     return 'RK-' + year + '-' + n;
   }
 
+  /* Where submissions go. Set <meta name="chamber-api" content="https://…">
+     in case-submission.html to post to the Chamber Console; leave it empty and
+     the form simulates a send, as a design demo should. */
+  var apiMeta = document.querySelector('meta[name="chamber-api"]');
+  var API_BASE = (apiMeta && apiMeta.getAttribute('content') || '').replace(/\/+$/, '');
+
+  /** The console's Enquiry shape — same field names the four steps collect. */
+  function payload() {
+    var d = collect();
+    return {
+      fullName: d.fullName, phone: d.phone, email: d.email, district: d.district,
+      contactMethod: d.contactMethod, location: d.location,
+      area: d.area, caseStage: d.stage, opposing: d.opposing || null, caseNo: d.caseNo || null,
+      urgency: d.urgency, deadline: d.deadline || null,
+      summary: d.summary, timeline: d.timeline || null, outcome: d.outcome,
+      documents: Array.isArray(d.documents) ? d.documents : [],
+      priorLawyer: d.priorLawyer || 'No'
+    };
+  }
+
+  function send() {
+    if (!API_BASE) {
+      // Demo mode: stands in for the POST, with a plausible reference.
+      return new Promise(function (resolve) { setTimeout(function () { resolve(reference()); }, 900); });
+    }
+    return fetch(API_BASE + '/api/enquiries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload())
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok || !body.referenceNo) throw new Error(body.error || ('HTTP ' + res.status));
+        return body.referenceNo;
+      });
+    });
+  }
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     if (!validateStep(4)) return;
@@ -409,9 +446,16 @@
     var original = labelSpan.textContent;
     labelSpan.textContent = t('Sending…', 'পাঠানো হচ্ছে…');
 
-    // Demo: stands in for the POST the live site makes.
-    setTimeout(function () {
-      var ref = reference();
+    send().catch(function (err) {
+      btn.disabled = false;
+      labelSpan.textContent = original;
+      if (window.siteToast) {
+        window.siteToast(t('Could not send: ', 'পাঠানো যায়নি: ') + (err && err.message ? err.message : '') +
+          t(' — please telephone the chamber.', ' — অনুগ্রহ করে চেম্বারে ফোন করুন।'));
+      }
+      return null;
+    }).then(function (ref) {
+      if (!ref) return;
       document.getElementById('ref-number').textContent = ref;
 
       // carry the summary across so it stays visible - and printable - after sending
@@ -439,9 +483,12 @@
         draftStatus.textContent = t('Submitted. Reference ', 'জমা হয়েছে। রেফারেন্স ') + ref;
       }
       if (clearBtn) clearBtn.hidden = true;
+      // the "nothing was actually sent" note is only true in demo mode
+      var demoNote = document.querySelector('[data-i18n="cs.ok.demo"]');
+      if (API_BASE && demoNote) demoNote.hidden = true;
       btn.disabled = false;
       labelSpan.textContent = original;
-    }, 900);
+    });
   });
 
   var printBtn = document.getElementById('print-btn');
