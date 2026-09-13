@@ -90,6 +90,33 @@ If you change a face, change it in `:root` (`--f-display`, `--f-body`,
 Bangla afterwards, since the `body.lang-bn` block near the top of the
 stylesheet has to keep every annotation style out of a Latin-only face.
 
+## Motion
+
+Restrained and purposeful. Every animation uses only `transform` and
+`opacity`, so nothing triggers layout.
+
+| Where | What |
+| --- | --- |
+| Hero headline | Words are wrapped by `main.js` and rise a line at a time. The delay comes from the line each word actually landed on, so it re-flows at any width and in either language. |
+| Hero column | Badges, lead, buttons and figures enter in sequence; the portrait card fades up alongside. |
+| Header | A gold reading-progress bar along the bottom edge. |
+| Practice areas | Filtered cards replay a short staggered entrance. |
+| Mobile drawer | Links cascade in when it opens. |
+| Throughout | Scroll reveals, counters, card and icon micro-interactions. |
+
+Three safeguards, all verified in the browser:
+
+1. **No JavaScript, nothing hidden.** Entrance states live behind the `.js`
+   class set in `<head>`, so content is fully visible if the script never runs.
+2. **The headline degrades to plain text.** Its hidden state applies only under
+   `.is-split`, which is added *after* a successful split - never before.
+3. **`prefers-reduced-motion` is honoured.** The splitter does not run at all,
+   and the progress bar is hidden.
+
+`revealHeadline()` is idempotent: it unwraps any previous split first. Without
+that, a second call finds every word already wrapped, wraps nothing, and bails
+out leaving the hidden state applied - which silently kills the headline.
+
 ## How the two languages work
 
 English is authored **directly in the HTML**, so the page is correct and

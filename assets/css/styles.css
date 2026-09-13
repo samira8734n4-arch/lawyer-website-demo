@@ -915,3 +915,91 @@ body.lang-bn .site-footer h4 { font-size: var(--fs-sm); }
 .cs-layout { display: grid; grid-template-columns: 1.55fr .95fr; gap: clamp(1.6rem, 4vw, 3rem); align-items: start; }
 @media (max-width: 980px) { .cs-layout { grid-template-columns: 1fr; } }
 .choice-title { display: block; font-weight: 600; color: var(--ink); line-height: 1.4; }
+
+/* ==========================================================================
+   Motion
+   Restrained and purposeful: transform and opacity only, every entrance
+   gated behind .js so nothing is hidden if the script never runs, and the
+   global prefers-reduced-motion rule above neutralises all of it.
+   ========================================================================== */
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes wordRise {
+  from { opacity: 0; transform: translateY(0.42em); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes plateIn {
+  from { opacity: 0; transform: translateY(20px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes drawerItemIn {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---- hero: the left column enters in sequence ---- */
+.js .hero-col > *:not(h1) { opacity: 0; animation: riseIn .7s var(--ease) both; }
+.js .hero-col > .hero-badges { animation-delay: .05s; }
+.js .hero-col > .hero-lead   { animation-delay: .34s; }
+.js .hero-col > .btn-row     { animation-delay: .44s; }
+.js .hero-col > .hero-proof  { animation-delay: .54s; }
+.js .hero .hero-card { opacity: 0; animation: plateIn .9s var(--ease) .22s both; }
+
+/* ---- headline: words rise a line at a time ----
+   main.js wraps each word and sets a per-line delay. The hidden state lives
+   under .is-split, which is only added once the split has actually worked. */
+.w { display: inline-block; }
+.hero h1.is-split .w,
+.page-head h1.is-split .w {
+  opacity: 0;
+  animation: wordRise .72s var(--ease) both;
+  will-change: transform, opacity;
+}
+.page-head h1.is-split .w { animation-duration: .6s; }
+
+/* ---- reading progress, along the bottom edge of the header ---- */
+.scroll-progress {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  pointer-events: none; overflow: hidden;
+}
+.scroll-progress i {
+  display: block; height: 100%; width: 100%;
+  background: linear-gradient(90deg, var(--gold-500), var(--gold-400));
+  transform: scaleX(0); transform-origin: left;
+}
+
+/* ---- practice-area filtering ---- */
+.pa-card.is-filtering { animation: riseIn .45s var(--ease) both; }
+
+/* ---- drawer links cascade in ---- */
+@media (max-width: 1020px) {
+  body.nav-open .nav-links li { animation: drawerItemIn .42s var(--ease) both; }
+  body.nav-open .nav-links li:nth-child(1) { animation-delay: .06s; }
+  body.nav-open .nav-links li:nth-child(2) { animation-delay: .11s; }
+  body.nav-open .nav-links li:nth-child(3) { animation-delay: .16s; }
+  body.nav-open .nav-links li:nth-child(4) { animation-delay: .21s; }
+  body.nav-open .nav-links li:nth-child(5) { animation-delay: .26s; }
+  body.nav-open .nav-links li:nth-child(6) { animation-delay: .31s; }
+}
+
+/* ---- micro-interactions ---- */
+.card--hover .card-icon { transition: background .28s var(--ease), color .28s var(--ease), transform .35s var(--ease); }
+.card--hover:hover .card-icon { transform: translateY(-2px) rotate(-3deg); }
+.contact-item .ci-icon { transition: transform .3s var(--ease), background .3s var(--ease); }
+.contact-item:hover .ci-icon { transform: translateY(-2px); background: var(--gold-500); }
+.timeline li::before { transition: transform .3s var(--ease), background .3s var(--ease); }
+.timeline li:hover::before { transform: scale(1.25); background: var(--gold-500); }
+.social a svg, .fab svg { transition: transform .25s var(--ease); }
+.social a:hover svg { transform: scale(1.1); }
+
+/* the form advances with a slightly longer, calmer step transition */
+.form-step { animation: riseIn .42s var(--ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  .js .hero-col > *:not(h1), .js .hero .hero-card { opacity: 1; animation: none; }
+  .hero h1.is-split .w, .page-head h1.is-split .w { opacity: 1; animation: none; }
+  .scroll-progress { display: none; }
+}

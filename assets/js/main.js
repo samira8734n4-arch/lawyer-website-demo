@@ -154,6 +154,111 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* Motion helpers                                                      */
+  /* ------------------------------------------------------------------ */
+  function prefersReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /* Wrap every word of an element in a span, preserving inline markup such
+     as the <em> in the hero headline. */
+  function wrapWords(el) {
+    var words = [];
+    (function walk(node) {
+      Array.prototype.slice.call(node.childNodes).forEach(function (child) {
+        if (child.nodeType === 3) {
+          if (!child.textContent.trim()) return;
+          var frag = document.createDocumentFragment();
+          child.textContent.split(/(\s+)/).forEach(function (part) {
+            if (!part) return;
+            if (/^\s+$/.test(part)) {
+              frag.appendChild(document.createTextNode(part));
+              return;
+            }
+            var span = document.createElement('span');
+            span.className = 'w';
+            span.textContent = part;
+            words.push(span);
+            frag.appendChild(span);
+          });
+          node.replaceChild(frag, child);
+        } else if (child.nodeType === 1 && child.className !== 'w') {
+          walk(child);
+        }
+      });
+    })(el);
+    return words;
+  }
+
+  /* Headline reveal: words rise a line at a time. The delay comes from the
+     line each word actually landed on, so it re-flows correctly at any width
+     and in either language. The hidden state only applies once .is-split is
+     added, so a failure here leaves the headline plainly visible. */
+  /* Undo a previous split, so re-running is safe. Without this a second call
+     finds every word already wrapped, wraps nothing, and bails out with the
+     hidden state still applied. */
+  function unwrapWords(el) {
+    $$('.w', el).forEach(function (span) {
+      span.parentNode.replaceChild(document.createTextNode(span.textContent), span);
+    });
+    el.normalize();
+  }
+
+  function revealHeadline(h) {
+    if (!h || prefersReducedMotion()) return;
+    h.classList.remove('is-split');
+    unwrapWords(h);
+    var words = wrapWords(h);
+    if (!words.length) return;
+
+    var lineIndex = -1, lastTop = null;
+    words.forEach(function (word) {
+      var top = word.offsetTop;
+      if (lastTop === null || Math.abs(top - lastTop) > 4) {
+        lineIndex++;
+        lastTop = top;
+      }
+      word.style.animationDelay = (0.06 + lineIndex * 0.085).toFixed(3) + 's';
+    });
+    h.classList.add('is-split');
+  }
+
+  function initHeadlines() {
+    var h = $('.hero h1') || $('.page-head h1');
+    if (!h) return;
+    revealHeadline(h);
+    // the i18n swap rewrites innerHTML, so rebuild the split afterwards
+    document.addEventListener('langchange', function () {
+      requestAnimationFrame(function () { revealHeadline(h); });
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Reading progress                                                    */
+  /* ------------------------------------------------------------------ */
+  function initScrollProgress() {
+    var bar = $('.scroll-progress i');
+    if (!bar || prefersReducedMotion()) return;
+    var frame = 0;
+    function paint() {
+      frame = 0;
+      var doc = document.documentElement;
+      var max = doc.scrollHeight - doc.clientHeight;
+      var p = max > 0 ? window.scrollY / max : 0;
+      bar.style.transform = 'scaleX(' + Math.min(Math.max(p, 0), 1).toFixed(4) + ')';
+    }
+    // Supersede the pending frame rather than guarding with a boolean: a
+    // dropped frame would leave a boolean latched and stall the bar for good.
+    function onScroll() {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(paint);
+    }
+    paint();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+  }
+
+  /* ------------------------------------------------------------------ */
   /* Scroll reveal                                                       */
   /* ------------------------------------------------------------------ */
   function initReveal() {
@@ -323,7 +428,13 @@
         cards.forEach(function (card) {
           var match = filter === 'all' || (card.dataset.tags || '').split(' ').indexOf(filter) !== -1;
           card.classList.toggle('is-hidden', !match);
-          if (match) shown++;
+          if (!match) return;
+          // replay a short entrance, staggered across the surviving cards
+          card.classList.remove('is-filtering');
+          card.style.animationDelay = (shown * 0.045).toFixed(3) + 's';
+          void card.offsetWidth; // restart the animation
+          card.classList.add('is-filtering');
+          shown++;
         });
         if (empty) empty.classList.toggle('is-shown', shown === 0);
       });
@@ -482,6 +593,8 @@
   function init() {
     initLang();
     initHeader();
+    initHeadlines();
+    initScrollProgress();
     initReveal();
     initCounters();
     initAccordions();
